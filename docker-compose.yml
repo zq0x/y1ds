@@ -65,6 +65,7 @@ services:
     volumes:      
       - ./vllm_local:/usr/src/app
       - ./vllm_local/logs:/var/log
+      - /var/run/docker.sock:/var/run/docker.sock
       - /models:/models
     depends_on:
       - redis
