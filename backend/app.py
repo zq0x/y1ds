@@ -137,6 +137,12 @@ async def docker_rest(request: Request):
     try:
         req_data = await request.json()
                 
+        if req_data["req_method"] == "test":
+            print(f'got test!')
+            print("req_data")
+            print(req_data)
+            return JSONResponse({"result": 200, "result_data": "teeest okoko"})
+                
         if req_data["req_method"] == "logs":
             req_container = client.containers.get(req_data["req_model"])
             res_logs = req_container.logs()

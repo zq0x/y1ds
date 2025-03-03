@@ -363,6 +363,48 @@ def get_download_speed():
         return f'download error: {e}'
 
 
+
+
+
+BACKEND_URL = f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest'
+
+def docker_api(req_type,req_model=None,req_task=None,req_prompt=None,req_temperature=None, req_config=None):
+    
+    try:
+        print(f'got model_config: {req_config} ')
+        response = requests.post(BACKEND_URL, json={
+            "req_type":req_type,
+            "req_model":req_model,
+            "req_task":req_task,
+            "req_prompt":req_prompt,
+            "req_temperature":req_temperature,
+            "req_model_config":req_config
+        })
+        
+        if response.status_code == 200:
+            response_json = response.json()
+            if response_json["result_status"] != 200:
+                logging.exception(f'[docker_api] Response Error: {response_json["result_data"]}')
+            return response_json["result_data"]                
+        else:
+            logging.exception(f'[docker_api] Request Error: {response}')
+            return f'Request Error: {response}'
+    
+    except Exception as e:
+        logging.exception(f'Exception occured: {e}', exc_info=True)
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return e
+
+
+
+
+
+
+
+
+
+
+
 with gr.Blocks() as app:
     gr.Markdown(
         """
@@ -411,6 +453,7 @@ with gr.Blocks() as app:
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
     btn_dl = gr.Button("Download", visible=True)
     btn_deploy = gr.Button("Deploy", visible=True)
+    btn_test = gr.Button("Test", visible=True)
     
     model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads],selected_model_container_name).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(lambda: gr.update(visible=True), None, selected_model_pipeline_tag).then(lambda: gr.update(visible=True), None, selected_model_transformers).then(lambda: gr.update(visible=True), None, selected_model_private).then(lambda: gr.update(visible=True), None, selected_model_downloads).then(lambda: gr.update(visible=True), None, selected_model_size).then(lambda: gr.update(visible=True), None, selected_model_gated).then(lambda: gr.update(visible=True), None, port_model).then(lambda current_value: current_value + 1, port_model, port_model).then(lambda: gr.update(visible=True), None, port_vllm).then(lambda current_value: current_value + 1, port_vllm, port_vllm).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl])
 
@@ -596,5 +639,9 @@ with gr.Blocks() as app:
 
     
     btn_deploy.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
+
+
+    
+    btn_test.click(docker_api,inputs=["test",model_dropdown,selected_model_pipeline_tag,"what is the capital of Germany?",0.77,selected_model_config_data],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
