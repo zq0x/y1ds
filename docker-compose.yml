@@ -53,18 +53,18 @@ services:
             - capabilities: [gpu]
     restart: unless-stopped
 
-  vllm_local:
+  local_vllm:
     build:
-      context: ./vllm_local
+      context: ./local_vllm
     ports:
       - "1370:1370"
-    container_name: vllm_local
+    container_name: local_vllm
     environment:
       - CONTAINER_PORT=1370
       - NCCL_DEBUG=INFO
     volumes:      
-      - ./vllm_local:/usr/src/app
-      - ./vllm_local/logs:/var/log
+      - ./local_vllm:/usr/src/app
+      - ./local_vllm/logs:/var/log
       - /var/run/docker.sock:/var/run/docker.sock
       - /models:/models
     depends_on:
@@ -74,4 +74,3 @@ services:
         reservations:
           devices:
             - capabilities: [gpu]
-    restart: unless-stopped

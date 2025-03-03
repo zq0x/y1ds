@@ -642,7 +642,7 @@ with gr.Blocks() as app:
 
 
     
-    btn_test.click(lambda selected_model: docker_api("test", selected_model, selected_model_pipeline_tag,"what is the capital of Germany?",0.77,"selected_config"), inputs=[model_dropdown], outputs=create_response)
+    btn_test.click(lambda selected_model: docker_api("test", selected_model, "auto","what is the capital of Germany?",0.77,"selected_config"), inputs=[model_dropdown], outputs=create_response)
     
     
 
