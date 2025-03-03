@@ -238,6 +238,28 @@ async def docker_rest(request: Request):
                     }
                     await r.set('db_gpu', json.dumps(add_data))
                         
+                print(f'finding containers to stop to free GPU memory...')
+                container_list = client.containers.list(all=True)
+                print(f'found total containers: {len(container_list)}')
+                # docker_container_list = get_docker_container_list()
+                # docker_container_list_running = [c for c in docker_container_list if c["State"]["Status"] == "running"]
+                
+                # res_container_list = client.containers.list(all=True)
+                # return JSONResponse([container.attrs for container in res_container_list])
+                
+                print(f'mhmmhmhmh')
+                vllm_containers_running = [c for c in container_list if c.name.startswith("vllm") and c.status == "running"]
+                print(f'found total vLLM running containers: {len(vllm_containers_running)}')
+                while len(vllm_containers_running) > 0:
+                    print(f'stopping all vLLM containers...')
+                    for vllm_container in vllm_containers_running:
+                        print(f'stopping container {vllm_container.name}...')
+                        vllm_container.stop()
+                        vllm_container.wait()
+                    print(f'waiting for containers to stop...')
+                    time.sleep(2)
+                    vllm_containers_running = [c for c in container_list if c.name.startswith("vllm") and c.status == "running"]
+                print(f'all vLLM containers stopped successfully') 
                                 
                 res_container = client.containers.run(
                     "vllm/vllm-openai:latest",
