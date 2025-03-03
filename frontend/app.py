@@ -8,9 +8,11 @@ import time
 from datetime import datetime
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 import pandas as pd
-import huggingface_hub
+from huggingface_hub import snapshot_download
 import redis
 import gradio as gr
+import logging
+import psutil
 
 current_models_data = []
 db_gpu_data = []
@@ -24,7 +26,16 @@ try:
 except Exception as e:
     print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
 
+logging.basicConfig(filename='logfile_container_frontend.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
+def load_log_file(req_container,req_amount):
+    try:
+        with open(f'logfile_{req_container}.log', 'r') as file:
+            lines = file.readlines()
+            return ''.join(lines[-req_amount:])
+    except Exception as e:
+        return f'{e}'
+    
 def get_gpu_data():
     try:
         res_gpu_data_all = json.loads(r.get('db_gpu'))

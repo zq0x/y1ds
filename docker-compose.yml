@@ -21,7 +21,7 @@ services:
     volumes:
       - ./backend:/usr/src/app
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/cloud/.cache/huggingface:/root/.cache/huggingface
+      - /models:/models
     depends_on:
       - redis
     deploy:
@@ -45,7 +45,7 @@ services:
       - HOST_PORT=7860
     volumes:
       - ./frontend:/usr/src/app
-      - /home/cloud/.cache/huggingface:/root/.cache/huggingface
+      - /models:/models
     deploy:
       resources:
         reservations:
