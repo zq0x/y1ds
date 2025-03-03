@@ -318,6 +318,47 @@ def json_to_pd():
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return rows
 
+
+def download_from_hf_hub(selected_model_id):
+    try:
+        print(f'trying to download {selected_model_id}...')
+        model_id_path = str(selected_model_id).replace('/', '_')
+        print(f'model_id_path {model_id_path}...')
+        
+        selected_model_id_arr = str(selected_model_id).split('/')
+        print(f'selected_model_id_arr {selected_model_id_arr}...')
+        
+        model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
+        print(f'model_id_path_default {model_id_path_default}...')
+        
+        model_path = snapshot_download(
+            repo_id=selected_model_id,
+            local_dir=f'/models/{model_id_path_default}'
+        )
+        return f'download result: {model_path}'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'download error: {e}'
+
+prev_bytes_recv = 0
+def get_download_speed():
+    try:
+        global prev_bytes_recv
+        print(f'trying to get download speed ...')
+        net_io = psutil.net_io_counters()
+        bytes_recv = net_io.bytes_recv
+        download_speed = bytes_recv - prev_bytes_recv
+        prev_bytes_recv = bytes_recv
+        download_speed_kb = download_speed / 1024
+        download_speed_mbit_s = (download_speed * 8) / (1024 ** 2)      
+        bytes_received_mb = bytes_recv / (1024 ** 2)
+        return f'{download_speed_mbit_s:.2f} MBit/s (total: {bytes_received_mb:.2f})'
+        # return f'{download_speed_kb:.2f} KB/s (total: {bytes_received_mb:.2f})'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'download error: {e}'
+
+
 with gr.Blocks() as app:
     gr.Markdown(
         """
@@ -542,8 +583,8 @@ with gr.Blocks() as app:
             return f'err {str(e)}'
     
     timer_dl = gr.Timer(1,active=False)
-    timer_dl.tick(docker_api_network, create_response, timer_dl_box)
-    
+    # timer_dl.tick(docker_api_network, create_response, timer_dl_box)
+    timer_dl.tick(get_download_speed, outputs=timer_dl_box)
     
     btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
 
