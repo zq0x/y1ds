@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 import pandas as pd
+import huggingface_hub
 from huggingface_hub import snapshot_download
 import redis
 import gradio as gr
