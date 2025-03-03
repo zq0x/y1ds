@@ -347,9 +347,9 @@ with gr.Blocks() as app:
         selected_model_gated = gr.Textbox(label="gated", visible=False)
         selected_model_downloads = gr.Textbox(label="downloads", visible=False)
     
-    selected_model_search_data = gr.Textbox(label="search_data", visible=False)
-    selected_model_hf_data = gr.Textbox(label="hf_data", visible=False)
-    selected_model_config_data = gr.Textbox(label="config_data", visible=False)
+    selected_model_search_data = gr.Textbox(label="search_data", visible=True)
+    selected_model_hf_data = gr.Textbox(label="hf_data", visible=True)
+    selected_model_config_data = gr.Textbox(label="config_data", visible=True)
     gr.Markdown(
         """
         <hr>
@@ -364,7 +364,8 @@ with gr.Blocks() as app:
         port_vllm = gr.Number(value=8000,visible=False,label="Port of vLLM: ")
     
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
-    btn_dl = gr.Button("Download", visible=False)
+    btn_dl = gr.Button("Download", visible=True)
+    btn_deploy = gr.Button("Deploy", visible=True)
     
     model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads],selected_model_container_name).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(lambda: gr.update(visible=True), None, selected_model_pipeline_tag).then(lambda: gr.update(visible=True), None, selected_model_transformers).then(lambda: gr.update(visible=True), None, selected_model_private).then(lambda: gr.update(visible=True), None, selected_model_downloads).then(lambda: gr.update(visible=True), None, selected_model_size).then(lambda: gr.update(visible=True), None, selected_model_gated).then(lambda: gr.update(visible=True), None, port_model).then(lambda current_value: current_value + 1, port_model, port_model).then(lambda: gr.update(visible=True), None, port_vllm).then(lambda current_value: current_value + 1, port_vllm, port_vllm).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl])
 
@@ -543,6 +544,10 @@ with gr.Blocks() as app:
     timer_dl = gr.Timer(1,active=False)
     timer_dl.tick(docker_api_network, create_response, timer_dl_box)
     
-    btn_dl.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
+    
+    btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
+
+    
+    btn_deploy.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
