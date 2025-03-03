@@ -52,3 +52,25 @@ services:
           devices:
             - capabilities: [gpu]
     restart: unless-stopped
+
+  vllm_local:
+    build:
+      context: ./vllm_local
+    ports:
+      - "1370:1370"
+    container_name: vllm_local
+    environment:
+      - CONTAINER_PORT=1370
+      - NCCL_DEBUG=INFO
+    volumes:      
+      - ./vllm_local:/usr/src/app
+      - ./vllm_local/logs:/var/log
+      - /models:/models
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    restart: unless-stopped
