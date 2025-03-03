@@ -170,7 +170,7 @@ async def docker_rest(request: Request):
 
         if req_data["req_method"] == "create":
             try:
-                container_name = f'vllm_{str(req_data["req_model"]).replace('/', '_')}'
+                container_name = f'vllm_{str(req_data["req_model"]).replace("/", "_")}'
                 res_db_gpu = await r.get('db_gpu')
                 if res_db_gpu is not None:
                     db_gpu = json.loads(res_db_gpu)                    
