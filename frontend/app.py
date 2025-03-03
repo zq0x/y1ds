@@ -355,8 +355,8 @@ def get_download_speed():
         prev_bytes_recv = bytes_recv
         download_speed_kb = download_speed / 1024
         download_speed_mbit_s = (download_speed * 8) / (1024 ** 2)      
-        bytes_received_mb = bytes_recv / (1024 ** 2)
-        return f'{download_speed_mbit_s:.2f} MBit/s (total: {bytes_received_mb:.2f})'
+        bytes_received_mb = bytes_recv
+        return f'{download_speed_mbit_s:.2f} MBit/s (total: {bytes_received_mb})'
         # return f'{download_speed_kb:.2f} KB/s (total: {bytes_received_mb:.2f})'
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
@@ -634,6 +634,9 @@ with gr.Blocks() as app:
     timer_dl = gr.Timer(1,active=False)
     # timer_dl.tick(docker_api_network, create_response, timer_dl_box)
     timer_dl.tick(get_download_speed, outputs=timer_dl_box)
+    
+    timer_c = gr.Timer(1,active=True)
+    timer_c.tick(refresh_container_list, outputs=docker_container_list)
     
     btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
 

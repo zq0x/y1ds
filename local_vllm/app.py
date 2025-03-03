@@ -15,6 +15,7 @@ import pynvml
 from vllm import LLM, SamplingParams
 import torch
 from transformers import AutoModelForCausalLM
+import tiktoken
 
 r = redis.Redis(host="redis", port=6379, db=0)
 
