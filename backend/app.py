@@ -170,7 +170,8 @@ async def docker_rest(request: Request):
 
         if req_data["req_method"] == "create":
             try:
-                container_name = f'vllm_{str(req_data["req_model"]).replace("/", "_")}'
+                container_name = str(req_data["req_model"]).replace('/', '_')
+                container_name = f'vllm_{container_name}'
                 res_db_gpu = await r.get('db_gpu')
                 if res_db_gpu is not None:
                     db_gpu = json.loads(res_db_gpu)                    
@@ -237,12 +238,13 @@ async def docker_rest(request: Request):
                     }
                     await r.set('db_gpu', json.dumps(add_data))
                         
+                                
                 res_container = client.containers.run(
                     "vllm/vllm-openai:latest",
-                    command=f'--model {req_data["req_model"]}, --tensor-parallel-size 2, --gpu_memory_utilization 0.77, --max-model-len 4096',
+                    command=f'--model {req_data["req_model"]}',
                     name=container_name,
                     runtime=req_data["req_runtime"],
-                    volumes={"/models": {"bind": "/models", "mode": "rw"}},
+                    volumes={"/home/cloud/.cache/huggingface": {"bind": "/root/.cache/huggingface", "mode": "rw"}},
                     ports={
                         f'{req_data["req_port_vllm"]}/tcp': ("0.0.0.0", req_data["req_port_model"])
                     },
