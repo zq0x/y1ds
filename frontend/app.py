@@ -333,19 +333,11 @@ def json_to_pd():
 
 def download_from_hf_hub(selected_model_id):
     try:
-        print(f'trying to download {selected_model_id}...')
-        model_id_path = str(selected_model_id).replace('/', '_')
-        print(f'model_id_path {model_id_path}...')
-        
         selected_model_id_arr = str(selected_model_id).split('/')
-        print(f'selected_model_id_arr {selected_model_id_arr}...')
-        
-        model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
-        print(f'model_id_path_default {model_id_path_default}...')
-        
+        print(f'selected_model_id_arr {selected_model_id_arr}...')       
         model_path = snapshot_download(
             repo_id=selected_model_id,
-            local_dir=f'/models/{model_id_path_default}'
+            local_dir=f'/models/{selected_model_id_arr[0]}/{selected_model_id_arr[1]}'
         )
         return f'download result: {model_path}'
     except Exception as e:
@@ -431,7 +423,9 @@ with gr.Blocks() as app:
         if len(text_model) == 0:
             gr.Markdown("Error pipeline_tag or model_id")
         else:
-            gr.Interface.from_pipeline(pipeline(text_pipeline, model=f'/models/{text_model}'))
+            selected_model_id_arr = str(text_model).split('/')
+            print(f'selected_model_id_arr {selected_model_id_arr}...')            
+            gr.Interface.from_pipeline(pipeline(text_pipeline, model=f'/models/{selected_model_id_arr[0]}/{selected_model_id_arr[1]}'))
 
     gpu_dataframe = gr.Dataframe(label="GPU information")
     gpu_timer = gr.Timer(1,active=True)
