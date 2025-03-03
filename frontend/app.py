@@ -642,6 +642,8 @@ with gr.Blocks() as app:
 
 
     
-    btn_test.click(docker_api,inputs=["test",model_dropdown,selected_model_pipeline_tag,"what is the capital of Germany?",0.77,selected_model_config_data],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
+    btn_test.click(lambda selected_model: docker_api("test", selected_model, selected_model_pipeline_tag,"what is the capital of Germany?",0.77,selected_model_config_data), inputs=[model_dropdown], outputs=create_response)
+    
+    
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
