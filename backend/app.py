@@ -241,7 +241,7 @@ async def docker_rest(request: Request):
                                 
                 res_container = client.containers.run(
                     "vllm/vllm-openai:latest",
-                    command=f'--model {req_data["req_model"]}',
+                    command=f'--model {req_data["req_model"]}, --tensor-parallel-size 2',
                     name=container_name,
                     runtime=req_data["req_runtime"],
                     volumes={"/home/cloud/.cache/huggingface": {"bind": "/root/.cache/huggingface", "mode": "rw"}},

@@ -431,7 +431,7 @@ with gr.Blocks() as app:
         if len(text_model) == 0:
             gr.Markdown("Error pipeline_tag or model_id")
         else:
-            gr.Interface.from_pipeline(pipeline(text_pipeline, model=text_model))
+            gr.Interface.from_pipeline(pipeline(text_pipeline, model=f'/models/{text_model}'))
 
     gpu_dataframe = gr.Dataframe(label="GPU information")
     gpu_timer = gr.Timer(1,active=True)
