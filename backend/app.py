@@ -12,6 +12,7 @@ import asyncio
 from datetime import datetime
 from contextlib import asynccontextmanager
 import pynvml
+import torch
 
 r = redis.Redis(host="redis", port=6379, db=0)
 
@@ -41,83 +42,83 @@ def get_gpu_info():
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return 0
 
+
+def cuda_support_bool():
+    try:
+        res_cuda_support = torch.cuda.is_available()
+        if res_cuda_support:
+            print(f'[START] [cuda_support_bool] CUDA found')
+        else:
+            print(f'[START] [cuda_support_bool] CUDA not supported!')
+        return res_cuda_support
+    except Exception as e:
+        print(f'[START] [cuda_support_bool] {e}')
+        return False
+
+# Return the number of CUDA GPUs available
+def cuda_device_count():
+    try:
+        res_gpu_int = torch.cuda.device_count()
+        res_gpu_int_arr = [i for i in range(res_gpu_int)]
+        print(f'[START] [cuda_support_bool] CUDA GPUs found: {res_gpu_int_arr}')
+        return res_gpu_int_arr
+    except Exception as e:
+        print(f'[START] [cuda_device_count] Failed to get device_count. Using default [0]. Error: {e}')
+        return [0]
+
+gpu_int_arr = cuda_device_count()
+
+print("gpu_int_arr")
+print(gpu_int_arr)
+
 current_gpu_info = get_gpu_info()
 gpu_int_arr = [0]
 
 async def redis_timer():
     while True:
-        try:
-            current_gpu_info = get_gpu_info()
-            res_db_gpu = await r.get('db_gpu')
-            if res_db_gpu is not None:
-                db_gpu = json.loads(res_db_gpu)
-                updated_gpu_data = []
-                for gpu_int in range(len(db_gpu)):
+        await update_redis_db()
+        await asyncio.sleep(0.2)
 
-                    update_data = {
-                        "gpu": gpu_int,
-                        "gpu_info": str(current_gpu_info),
-                        "running_model": db_gpu[gpu_int].get("running_model", "0"),
-                        "timestamp": str(datetime.now()),
-                        "port_vllm": db_gpu[gpu_int].get("port_vllm", "0"),
-                        "port_model": db_gpu[gpu_int].get("port_model", "0"),
-                        "used_ports": db_gpu[gpu_int].get("used_ports", "0"),
-                        "used_models": db_gpu[gpu_int].get("used_models", "0"),
-                    }
-                    updated_gpu_data.append(update_data)
-                await r.set('db_gpu', json.dumps(updated_gpu_data))
-            else:
-                update_data = [{
-                    "gpu": 0,
-                    "gpu_info": str(current_gpu_info),
-                    "running_model": "0",
-                    "timestamp": str(datetime.now()),
-                    "port_vllm": "0",
-                    "port_model": "0",
-                    "used_ports": "0",
-                    "used_models": "0",
-                }]
-                await r.set('db_gpu', json.dumps(update_data))
-            await asyncio.sleep(0.2)
-        except Exception as e:
-            print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Error: {e}')
-            await asyncio.sleep(0.2)
-
-async def redis_add(gpu,running_model,port_vllm,port_model,used_ports,used_models):
-    try:        
+async def redis_add(gpu, running_model, port_vllm, port_model, used_ports, used_models):
+    try:
         current_gpu_info = get_gpu_info()
         res_db_gpu = await r.get('db_gpu')
-        if res_db_gpu is not None:
-            db_gpu = json.loads(res_db_gpu)
-            add_data = {
-                        "gpu": gpu, 
-                        "gpu_info": str(current_gpu_info),
-                        "running_model": running_model,
-                        "timestamp": str(datetime.now()),
-                        "port_vllm": port_vllm,
-                        "port_model": port_model,
-                        "used_ports": used_ports,
-                        "used_models": used_models
-                        }
-            db_gpu += [add_data]
-            await r.set('db_gpu', json.dumps(db_gpu))
-            await asyncio.sleep(0.2)
-        else:
-            update_data = {
-                "gpu": 0, 
-                "gpu_info": str(current_gpu_info),
-                "running_model": "0",
-                "timestamp": str(datetime.now()),
-                "port_vllm": "0",
-                "port_model": "0",
-                "used_ports": "0",
-                "used_models": "0"
-                }
-            await r.set('db_gpu', json.dumps(update_data))
-            await asyncio.sleep(0.2)   
+        db_gpu = json.loads(res_db_gpu) if res_db_gpu else []
+
+        new_entry = {
+            "gpu": gpu,
+            "gpu_info": str(current_gpu_info),
+            "running_model": running_model,
+            "timestamp": str(datetime.now()),
+            "port_vllm": port_vllm,
+            "port_model": port_model,
+            "used_ports": used_ports,
+            "used_models": used_models
+        }
+
+        db_gpu.append(new_entry)
+        await r.set('db_gpu', json.dumps(db_gpu))
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        await asyncio.sleep(0.2)  # Wait before retrying
+    await asyncio.sleep(0.2)
+
+async def update_redis_db():
+    try:
+        current_gpu_info = get_gpu_info()
+        res_db_gpu = await r.get('db_gpu')
+        db_gpu = json.loads(res_db_gpu) if res_db_gpu else [{}]
+
+        for gpu_int, gpu in enumerate(db_gpu):
+            await redis_add(
+                gpu_int,
+                gpu.get("running_model", "0"),
+                gpu.get("port_vllm", "0"),
+                gpu.get("port_model", "0"),
+                gpu.get("used_ports", "0"),
+                gpu.get("used_models", "0")
+            )
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Error: {e}')
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
