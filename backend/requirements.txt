@@ -3,4 +3,3 @@ uvicorn
 docker
 redis
 pynvml
-torch
