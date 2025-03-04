@@ -282,29 +282,6 @@ def gr_load_check(selected_model_id,selected_model_pipeline_tag,selected_model_t
     else:
         return gr.update(visible=True), gr.update(visible=False)
 
-rx_change_arr = []
-def check_rx_change(current_rx_bytes):
-    try:                
-        try:
-            int(current_rx_bytes)
-        except ValueError:
-            return '0'
-        global rx_change_arr
-        rx_change_arr += [int(current_rx_bytes)]
-        if len(rx_change_arr) > 4:
-            last_value = rx_change_arr[-1]
-            same_value_count = 0
-            for i in range(1,len(rx_change_arr)):
-                if rx_change_arr[i*-1] == last_value:
-                    same_value_count += 1
-                    if same_value_count > 10:
-                        return f'Count > 10 Download finished'
-                else:
-                    return f'Count: {same_value_count} {str(rx_change_arr)}'
-            return f'Count: {same_value_count} {str(rx_change_arr)}'        
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'Error rx_change_arr {str(e)}'
 
 def json_to_pd():       
     rows = []
@@ -345,10 +322,37 @@ def download_from_hf_hub(selected_model_id):
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return f'download error: {e}'
 
+
+
+rx_change_arr = []
+def check_rx_change():
+    try:
+        global rx_change_arr
+        
+        if len(rx_change_arr) > 4:
+            last_value = rx_change_arr[-1]
+            same_value_count = 0
+            for i in range(1,len(rx_change_arr)):
+                if rx_change_arr[i*-1] == last_value:
+                    same_value_count += 1
+                    if same_value_count > 10:
+                        return f'Count > 10 Download finished'
+                else:
+                    return f'Count: {same_value_count} {str(rx_change_arr)}'
+            return f'Count: {same_value_count} {str(rx_change_arr)}'   
+        else:
+            return f'waiting for download ...'     
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'Error rx_change_arr {str(e)}'
+
+
 prev_bytes_recv = 0
 def get_download_speed():
     try:
         global prev_bytes_recv
+        global rx_change_arr
+        
         print(f'trying to get download speed ...')
         net_io = psutil.net_io_counters()
         bytes_recv = net_io.bytes_recv
@@ -357,6 +361,7 @@ def get_download_speed():
         download_speed_kb = download_speed / 1024
         download_speed_mbit_s = (download_speed * 8) / (1024 ** 2)      
         bytes_received_mb = bytes_recv
+        rx_change_arr.append(rx_change_arr)
         return f'{download_speed_mbit_s:.2f} MBit/s (total: {bytes_received_mb})'
         # return f'{download_speed_kb:.2f} KB/s (total: {bytes_received_mb:.2f})'
     except Exception as e:
@@ -460,6 +465,7 @@ with gr.Blocks() as app:
 
     create_response = gr.Textbox(label="Building container...", show_label=True, visible=False)  
     timer_dl_box = gr.Textbox(label="Dowmload progress:", visible=False)
+    timer_dl_box2 = gr.Textbox(label="Dowmload array", visible=True)
     
     btn_interface = gr.Button("Load Interface",visible=False)
     @gr.render(inputs=[selected_model_pipeline_tag, selected_model_id], triggers=[btn_interface.click])
@@ -633,16 +639,18 @@ with gr.Blocks() as app:
             return f'err {str(e)}'
     
     timer_dl = gr.Timer(1,active=False)
-    # timer_dl.tick(docker_api_network, create_response, timer_dl_box)
-    timer_dl.tick(get_download_speed, outputs=timer_dl_box)
+    timer_dl.tick(get_download_speed, outputs=timer_dl_box)    
+    
+    timer_dl2 = gr.Timer(1,active=False)
+    timer_dl2.tick(get_download_speed, outputs=timer_dl_box)
     
     timer_c = gr.Timer(1,active=False)
     timer_c.tick(refresh_container_list)
     
-    btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.Timer(active=True), None, timer_c).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
+    btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.Timer(active=True), None, timer_c).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.Timer(active=True), None, timer_dl2).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
 
     
-    btn_deploy.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
+    btn_deploy.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, timer_dl_box2).then(lambda: gr.update(visible=True), None, btn_interface)
 
 
     
