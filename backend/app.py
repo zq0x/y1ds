@@ -20,7 +20,6 @@ def get_gpu_info():
     try:
         pynvml.nvmlInit()
         device_count = pynvml.nvmlDeviceGetCount()
-        gpu_info = []
         handle = pynvml.nvmlDeviceGetHandleByIndex(0)
         utilization = pynvml.nvmlDeviceGetUtilizationRates(handle)
         gpu_util = utilization.gpu
@@ -29,19 +28,18 @@ def get_gpu_info():
         mem_total = memory_info.total / 1024**2
         mem_util = (mem_used / mem_total) * 100
 
-        gpu_info.append({
-                "gpu_count": device_count,
-                "gpu_util": float(gpu_util),
-                "mem_used": float(mem_used),
-                "mem_total": float(mem_total),
-                "mem_util": float(mem_util)
-        })
-        pynvml.nvmlShutdown()     
+        gpu_info = {
+            "gpu_count": device_count,
+            "gpu_util": float(gpu_util),
+            "mem_used": float(mem_used),
+            "mem_total": float(mem_total),
+            "mem_util": float(mem_util)
+        }
+        pynvml.nvmlShutdown()
         return gpu_info
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return 0
-
 
 def cuda_support_bool():
     try:
@@ -66,14 +64,6 @@ def cuda_device_count():
         print(f'[START] [cuda_device_count] Failed to get device_count. Using default [0]. Error: {e}')
         return [0]
 
-gpu_int_arr = cuda_device_count()
-
-print("gpu_int_arr")
-print(gpu_int_arr)
-
-current_gpu_info = get_gpu_info()
-gpu_int_arr = [0]
-
 async def redis_timer():
     while True:
         await update_redis_db()
@@ -96,7 +86,14 @@ async def redis_add(gpu, running_model, port_vllm, port_model, used_ports, used_
             "used_models": used_models
         }
 
-        db_gpu.append(new_entry)
+        # Update existing entry or append new entry
+        for entry in db_gpu:
+            if entry["gpu"] == gpu:
+                entry.update(new_entry)
+                break
+        else:
+            db_gpu.append(new_entry)
+
         await r.set('db_gpu', json.dumps(db_gpu))
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
@@ -104,18 +101,17 @@ async def redis_add(gpu, running_model, port_vllm, port_model, used_ports, used_
 
 async def update_redis_db():
     try:
-        current_gpu_info = get_gpu_info()
         res_db_gpu = await r.get('db_gpu')
-        db_gpu = json.loads(res_db_gpu) if res_db_gpu else [{}]
+        db_gpu = json.loads(res_db_gpu) if res_db_gpu else []
 
         for gpu_int, gpu in enumerate(db_gpu):
             await redis_add(
-                gpu_int,
-                gpu.get("running_model", "0"),
-                gpu.get("port_vllm", "0"),
-                gpu.get("port_model", "0"),
-                gpu.get("used_ports", "0"),
-                gpu.get("used_models", "0")
+                gpu=gpu_int,
+                running_model=gpu.get("running_model", "0"),
+                port_vllm=gpu.get("port_vllm", "0"),
+                port_model=gpu.get("port_model", "0"),
+                used_ports=gpu.get("used_ports", "0"),
+                used_models=gpu.get("used_models", "0")
             )
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Error: {e}')
