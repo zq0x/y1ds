@@ -53,24 +53,25 @@ services:
             - capabilities: [gpu]
     restart: unless-stopped
 
-  local_vllm:
+  vllm:
     build:
-      context: ./local_vllm
-    ports:
-      - "1370:1370"
-    container_name: local_vllm
-    environment:
-      - CONTAINER_PORT=1370
-      - NCCL_DEBUG=INFO
-    volumes:      
-      - ./local_vllm:/usr/src/app
-      - ./local_vllm/logs:/var/log
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /models:/models
-    depends_on:
-      - redis
+      context: ./vllm
+    image: xoo4foo/vllmxd:latest
+    runtime: nvidia
     deploy:
       resources:
         reservations:
           devices:
-            - capabilities: [gpu]
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "1370:1370"
+    container_name: container_vllm
+    volumes:
+      - ./vllm/logs:/var/log
+      - ./models:/models
+    shm_size: 8gb
+    environment:
+      - NCCL_DEBUG=INFO
+      - CONTAINER_PORT=1370

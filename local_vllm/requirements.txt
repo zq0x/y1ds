@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-docker
-redis
-pynvml
-opencv-python
-ffmpeg
-vllm
-tiktoken
