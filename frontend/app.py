@@ -15,6 +15,8 @@ import gradio as gr
 import logging
 import psutil
 
+
+docker_container_list = []
 current_models_data = []
 db_gpu_data = []
 db_gpu_data_len = ''
@@ -47,16 +49,15 @@ def get_gpu_data():
         return e
     
 def get_docker_container_list():
+    global docker_container_list
     response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"list"})
     res_json = response.json()
-
+    docker_container_list = res_json.copy()
     if response.status_code == 200:
         return res_json
     else:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return f'Error: {response.status_code}'
-
-docker_container_list = get_docker_container_list()
 
 def docker_api_logs(req_model):
     try:
