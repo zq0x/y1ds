@@ -291,7 +291,7 @@ def json_to_pd():
         for entry in gpu_list:
             gpu_info = ast.literal_eval(entry['gpu_info'])[0]
             rows.append({
-                "#": entry["gpu"],
+                "#": entry["gpu_i"],
                 "GPU Usage": f'{gpu_info["gpu_util"]} %',
                 "Memory Usage": f'{"{:.2f}".format(gpu_info["mem_util"])} % ({gpu_info["mem_used"]} MB/{gpu_info["mem_total"]} MB)',
                 "Running model": entry["running_model"],
